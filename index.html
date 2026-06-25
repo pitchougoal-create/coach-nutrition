@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calories Mon Coach V2</title>
+<style>
+:root{--bg:#0b1020;--card:#141b2f;--text:#f8fafc;--muted:#aab4c8;--green:#22c55e;--line:#29324a;--red:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at top,#17381f 0,#0b1020 42%,#060914 100%);color:var(--text)}
+.app{max-width:820px;margin:auto;padding:18px 14px 92px}
+h1{margin:4px 0 0;font-size:26px} h2{margin:0 0 12px} h3{margin:0 0 6px}
+.muted,.tiny{color:var(--muted)}.tiny{font-size:12px}
+.card{background:rgba(20,27,47,.94);border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:16px;margin:12px 0;box-shadow:0 20px 55px rgba(0,0,0,.32)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{background:#0f172a;border:1px solid #29324a;border-radius:18px;padding:13px}
+.metric small{display:block;color:#aab4c8}.metric strong{display:block;font-size:24px}
+label{display:block;color:#aab4c8;margin:10px 0 6px;font-size:13px}
+input,select,textarea,button{width:100%;border:1px solid #29324a;border-radius:14px;padding:12px;background:#0f172a;color:#f8fafc;font:inherit;outline:none}
+textarea{min-height:78px}
+button{background:#22c55e;color:#052e16;font-weight:900;border:0;margin-top:10px;cursor:pointer}
+button.secondary{background:#253049;color:#f8fafc;border:1px solid #334155}
+button.danger{background:#5b1d28;color:#fecdd3;border:1px solid rgba(239,68,68,.35)}
+button:disabled{opacity:.55}
+.tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(9,13,24,.96);backdrop-filter:blur(14px);display:flex;gap:6px;padding:9px 9px calc(9px + env(safe-area-inset-bottom));z-index:5;border-top:1px solid rgba(255,255,255,.08)}
+.tabs button{background:transparent;color:#aab4c8;margin:0;font-size:12px;padding:10px 4px}.tabs button.active{background:#16351f;color:#86efac}
+.hidden{display:none!important}.meal{background:#0f172a;border:1px solid #29324a;border-radius:18px;padding:12px;margin:10px 0}
+.chip{display:inline-block;background:#1f2937;border-radius:999px;padding:6px 9px;margin:3px;font-size:12px}
+.row{display:flex;gap:10px;align-items:center}.space{justify-content:space-between}
+.warn{background:rgba(245,158,11,.11);border:1px solid rgba(245,158,11,.3);color:#fde68a;border-radius:16px;padding:12px;font-size:13px}
+#scanner{border-radius:18px;overflow:hidden;border:1px solid #29324a;background:#050816;margin-top:10px}
+#scanner video{width:100%!important;border-radius:18px}
+.list button{text-align:left;background:#0f172a;color:#f8fafc;border:1px solid #29324a;font-weight:700}
+.progress{height:12px;background:#0f172a;border-radius:999px;overflow:hidden;border:1px solid #29324a}.bar{height:100%;background:#22c55e;width:0%}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+<h1>Calories Mon Coach V2</h1>
+<div class="tiny">Scan code-barres, Open Food Facts, base locale enrichie</div>
+</header>
+
+<section id="dash">
+<div class="card">
+<div class="row space"><h2>Aujourd’hui</h2><button class="secondary" style="width:auto" onclick="show('add')">+ Repas</button></div>
+<div class="grid">
+<div class="metric"><small>Consommées</small><strong id="calIn">0</strong></div>
+<div class="metric"><small>Restantes</small><strong id="calLeft">0</strong></div>
+<div class="metric"><small>Objectif</small><strong id="calGoal">0</strong></div>
+<div class="metric"><small>Eau</small><strong id="waterGoal">0 L</strong></div>
+</div>
+<label>Progression calories</label><div class="progress"><div id="calBar" class="bar"></div></div>
+</div>
+<div class="card"><h2>Macros</h2><div class="grid">
+<div class="metric"><small>Protéines</small><strong id="prot">0g</strong></div>
+<div class="metric"><small>Glucides</small><strong id="carbs">0g</strong></div>
+<div class="metric"><small>Lipides</small><strong id="fat">0g</strong></div>
+<div class="metric"><small>Fibres</small><strong id="fiber">0g</strong></div>
+</div></div>
+<div class="card"><h2>Repas du jour</h2><div id="todayMeals" class="muted">Aucun repas.</div></div>
+</section>
+
+<section id="add" class="hidden">
+<div class="card">
+<h2>Ajouter un repas</h2>
+<label>Type</label><select id="mealType"><option>Petit-déjeuner</option><option>Déjeuner</option><option>Dîner</option><option>Collation</option></select>
+
+<div class="warn">Le scan marche seulement en HTTPS. Sur GitHub Pages, c’est bon. Autorise la caméra quand l’iPhone te le demande.</div>
+
+<label>Scanner un code-barres</label>
+<button onclick="startScanner()">📷 Démarrer la caméra</button>
+<button class="secondary" onclick="stopScanner()">Arrêter la caméra</button>
+<div id="scanner" class="hidden"></div>
+
+<label>Ou taper un code-barres</label>
+<input id="barcode" inputmode="numeric" placeholder="Ex : 3017620422003">
+<button onclick="lookupBarcode()">Chercher produit Open Food Facts</button>
+
+<label>Recherche aliment dans la base locale</label>
+<input id="simpleSearch" placeholder="Ex : poulet, riz, banane, fromage blanc, saumon...">
+<button class="secondary" onclick="searchSimpleFood()">Chercher aliment</button>
+<div id="foodResults" class="list"></div>
+
+<button class="secondary" onclick="openManual()">Ajouter manuellement</button>
+</div>
+
+<div id="resultCard" class="card hidden">
+<h2>Résultat</h2>
+<label>Nom</label><input id="rName">
+<label>Quantité consommée en grammes</label><input id="rQty" type="number" value="100" oninput="recalcQty()">
+<div class="grid">
+<div><label>Calories</label><input id="rCalories" type="number"></div>
+<div><label>Protéines g</label><input id="rProtein" type="number" step="0.1"></div>
+<div><label>Glucides g</label><input id="rCarbs" type="number" step="0.1"></div>
+<div><label>Lipides g</label><input id="rFat" type="number" step="0.1"></div>
+<div><label>Fibres g</label><input id="rFiber" type="number" step="0.1"></div>
+<div><label>Sucre g</label><input id="rSugar" type="number" step="0.1"></div>
+<div><label>Sel g</label><input id="rSalt" type="number" step="0.01"></div>
+</div>
+<label>Note</label><textarea id="rAdvice"></textarea>
+<button onclick="saveResult()">Enregistrer</button>
+</div>
+</section>
+
+<section id="hist" class="hidden"><div class="card"><h2>Historique</h2><div id="historyList"></div></div></section>
+
+<section id="prof" class="hidden"><div class="card">
+<h2>Profil</h2>
+<div class="grid">
+<div><label>Sexe</label><select id="sex"><option value="male">Homme</option><option value="female">Femme</option></select></div>
+<div><label>Âge</label><input id="age" type="number" value="30"></div>
+<div><label>Taille cm</label><input id="height" type="number" value="175"></div>
+<div><label>Poids kg</label><input id="weight" type="number" value="75"></div>
+<div><label>Activité</label><select id="activity"><option value="1.2">Sédentaire</option><option value="1.375">Léger</option><option value="1.55">Modéré</option><option value="1.725">Actif</option><option value="1.9">Très actif</option></select></div>
+<div><label>Objectif</label><select id="goal"><option value="lose">Perdre du poids</option><option value="maintain">Maintenir</option><option value="gain">Prendre du muscle</option></select></div>
+</div>
+<button onclick="saveProfile()">Sauvegarder</button>
+<button class="danger" onclick="resetAll()">Réinitialiser</button>
+</div></section>
+</div>
+
+<nav class="tabs">
+<button id="tdash" class="active" onclick="show('dash')">Accueil</button>
+<button id="tadd" onclick="show('add')">Ajouter</button>
+<button id="thist" onclick="show('hist')">Historique</button>
+<button id="tprof" onclick="show('prof')">Profil</button>
+</nav>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+const STORE={profile:"profile_v4",meals:"meals_v4"};
+let base100=null, scanner=null, scannerRunning=false;
+
+const foods=[
+{name:"Riz cuit",keys:"riz",calories:130,protein:2.7,carbs:28,fat:.3,fiber:.4,sugar:.1,salt:0},
+{name:"Riz cru",keys:"riz cru",calories:356,protein:7,carbs:78,fat:.7,fiber:1.3,sugar:.1,salt:0},
+{name:"Pâtes cuites",keys:"pates pâtes spaghetti macaroni",calories:157,protein:5.8,carbs:30.6,fat:.9,fiber:1.8,sugar:.6,salt:.01},
+{name:"Pommes de terre cuites",keys:"pomme de terre patate",calories:87,protein:1.9,carbs:20.1,fat:.1,fiber:1.8,sugar:.9,salt:.01},
+{name:"Patate douce",keys:"patate douce",calories:86,protein:1.6,carbs:20.1,fat:.1,fiber:3,sugar:4.2,salt:.01},
+{name:"Pain blanc",keys:"pain baguette",calories:265,protein:9,carbs:49,fat:3.2,fiber:2.7,sugar:5,salt:1.2},
+{name:"Pain complet",keys:"pain complet",calories:247,protein:13,carbs:41,fat:4.2,fiber:7,sugar:6,salt:1.1},
+{name:"Flocons d’avoine",keys:"avoine flocons porridge",calories:389,protein:16.9,carbs:66.3,fat:6.9,fiber:10.6,sugar:.9,salt:.01},
+{name:"Œuf entier",keys:"oeuf œuf oeufs œufs",calories:143,protein:12.6,carbs:.7,fat:9.5,fiber:0,sugar:.4,salt:.36},
+{name:"Blanc d’œuf",keys:"blanc oeuf blanc œuf",calories:52,protein:10.9,carbs:.7,fat:.2,fiber:0,sugar:.7,salt:.17},
+{name:"Poulet blanc cuit",keys:"poulet blanc poulet",calories:165,protein:31,carbs:0,fat:3.6,fiber:0,sugar:0,salt:.18},
+{name:"Dinde",keys:"dinde escalope",calories:135,protein:29,carbs:0,fat:1.6,fiber:0,sugar:0,salt:.16},
+{name:"Steak haché 5%",keys:"steak haché steak boeuf bœuf",calories:137,protein:21,carbs:0,fat:5,fiber:0,sugar:0,salt:.18},
+{name:"Steak haché 15%",keys:"steak 15 boeuf haché",calories:215,protein:19,carbs:0,fat:15,fiber:0,sugar:0,salt:.18},
+{name:"Jambon blanc",keys:"jambon",calories:115,protein:20,carbs:1,fat:3.5,fiber:0,sugar:.8,salt:2},
+{name:"Thon au naturel",keys:"thon",calories:116,protein:25.5,carbs:0,fat:1,fiber:0,sugar:0,salt:.9},
+{name:"Saumon",keys:"saumon",calories:208,protein:20,carbs:0,fat:13,fiber:0,sugar:0,salt:.15},
+{name:"Cabillaud",keys:"cabillaud poisson blanc",calories:82,protein:18,carbs:0,fat:.7,fiber:0,sugar:0,salt:.12},
+{name:"Crevettes",keys:"crevettes",calories:99,protein:24,carbs:.2,fat:.3,fiber:0,sugar:0,salt:.9},
+{name:"Fromage blanc 0%",keys:"fromage blanc 0",calories:45,protein:8,carbs:3.5,fat:.2,fiber:0,sugar:3.5,salt:.1},
+{name:"Skyr nature",keys:"skyr",calories:60,protein:10.5,carbs:3.6,fat:.2,fiber:0,sugar:3.6,salt:.1},
+{name:"Yaourt nature",keys:"yaourt",calories:61,protein:3.5,carbs:4.7,fat:3.3,fiber:0,sugar:4.7,salt:.12},
+{name:"Lait demi-écrémé",keys:"lait",calories:47,protein:3.3,carbs:4.8,fat:1.6,fiber:0,sugar:4.8,salt:.1},
+{name:"Emmental",keys:"emmental fromage",calories:380,protein:28,carbs:0,fat:30,fiber:0,sugar:0,salt:.7},
+{name:"Mozzarella",keys:"mozzarella",calories:280,protein:18,carbs:2.2,fat:22,fiber:0,sugar:1,salt:.6},
+{name:"Banane",keys:"banane",calories:89,protein:1.1,carbs:22.8,fat:.3,fiber:2.6,sugar:12.2,salt:0},
+{name:"Pomme",keys:"pomme fruit",calories:52,protein:.3,carbs:14,fat:.2,fiber:2.4,sugar:10.4,salt:0},
+{name:"Orange",keys:"orange",calories:47,protein:.9,carbs:11.8,fat:.1,fiber:2.4,sugar:9.4,salt:0},
+{name:"Fraise",keys:"fraise fraises",calories:32,protein:.7,carbs:7.7,fat:.3,fiber:2,sugar:4.9,salt:0},
+{name:"Avocat",keys:"avocat",calories:160,protein:2,carbs:8.5,fat:14.7,fiber:6.7,sugar:.7,salt:.02},
+{name:"Tomate",keys:"tomate",calories:18,protein:.9,carbs:3.9,fat:.2,fiber:1.2,sugar:2.6,salt:.01},
+{name:"Carotte",keys:"carotte",calories:41,protein:.9,carbs:9.6,fat:.2,fiber:2.8,sugar:4.7,salt:.07},
+{name:"Brocoli",keys:"brocoli",calories:34,protein:2.8,carbs:6.6,fat:.4,fiber:2.6,sugar:1.7,salt:.03},
+{name:"Haricots verts",keys:"haricots verts",calories:31,protein:1.8,carbs:7,fat:.1,fiber:3.4,sugar:3.3,salt:.01},
+{name:"Lentilles cuites",keys:"lentilles",calories:116,protein:9,carbs:20,fat:.4,fiber:7.9,sugar:1.8,salt:.01},
+{name:"Pois chiches cuits",keys:"pois chiches",calories:164,protein:8.9,carbs:27.4,fat:2.6,fiber:7.6,sugar:4.8,salt:.01},
+{name:"Huile d’olive",keys:"huile olive",calories:884,protein:0,carbs:0,fat:100,fiber:0,sugar:0,salt:0},
+{name:"Beurre",keys:"beurre",calories:717,protein:.9,carbs:.1,fat:81,fiber:0,sugar:.1,salt:.02},
+{name:"Amandes",keys:"amandes",calories:579,protein:21,carbs:22,fat:50,fiber:12.5,sugar:4.4,salt:.01},
+{name:"Noix",keys:"noix",calories:654,protein:15,carbs:14,fat:65,fiber:6.7,sugar:2.6,salt:.01},
+{name:"Chocolat noir",keys:"chocolat noir",calories:546,protein:4.9,carbs:61,fat:31,fiber:7,sugar:48,salt:.02},
+{name:"Pizza moyenne",keys:"pizza",calories:266,protein:11,carbs:33,fat:10,fiber:2.3,sugar:3.6,salt:1.4},
+{name:"Burger simple",keys:"burger hamburger",calories:295,protein:17,carbs:30,fat:12,fiber:1.5,sugar:5,salt:1.2},
+{name:"Frites",keys:"frites",calories:312,protein:3.4,carbs:41,fat:15,fiber:3.8,sugar:.3,salt:.5},
+{name:"Couscous",keys:"couscous semoule",calories:112,protein:3.8,carbs:23,fat:.2,fiber:1.4,sugar:.1,salt:.01},
+{name:"Semoule cuite",keys:"semoule",calories:112,protein:3.8,carbs:23,fat:.2,fiber:1.4,sugar:.1,salt:.01},
+{name:"Quinoa cuit",keys:"quinoa",calories:120,protein:4.4,carbs:21.3,fat:1.9,fiber:2.8,sugar:.9,salt:.01}
+];
+
+function load(k,f){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function today(){return new Date().toISOString().slice(0,10)}
+function n(x){return Math.round(Number(x||0))}
+function one(x){return Number(x||0).toFixed(1)}
+function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+function profile(){return load(STORE.profile,{sex:"male",age:30,height:175,weight:75,activity:1.55,goal:"lose"})}
+function meals(){return load(STORE.meals,[])}
+function targets(p){let b=p.sex==="male"?10*p.weight+6.25*p.height-5*p.age+5:10*p.weight+6.25*p.height-5*p.age-161;let c=b*p.activity;if(p.goal==="lose")c-=400;if(p.goal==="gain")c+=250;c=Math.max(1200,Math.round(c));let pr=Math.round(p.weight*(p.goal==="gain"?2.2:p.goal==="lose"?2:1.6));let fa=Math.round(p.weight*.9);let ca=Math.max(0,Math.round((c-pr*4-fa*9)/4));return{calories:c,protein:pr,fat:fa,carbs:ca,water:(p.weight*.035).toFixed(1)}}
+function sums(a){return a.reduce((s,m)=>{["calories","protein","carbs","fat","fiber"].forEach(k=>s[k]+=+m[k]||0);return s},{calories:0,protein:0,carbs:0,fat:0,fiber:0})}
+function show(v){["dash","add","hist","prof"].forEach(x=>{document.getElementById(x).classList.toggle("hidden",x!==v);document.getElementById("t"+x).classList.toggle("active",x===v)});if(v!=="add")stopScanner();if(v==="prof")fillProfile();if(v==="hist")renderHistory();render()}
+function fillProfile(){let p=profile();sex.value=p.sex;age.value=p.age;height.value=p.height;weight.value=p.weight;activity.value=p.activity;goal.value=p.goal}
+function saveProfile(){save(STORE.profile,{sex:sex.value,age:+age.value,height:+height.value,weight:+weight.value,activity:+activity.value,goal:goal.value});render();alert("Profil sauvegardé ✅")}
+function render(){let t=targets(profile()), d=meals().filter(m=>m.date===today()), s=sums(d);calIn.textContent=n(s.calories);calLeft.textContent=n(t.calories-s.calories);calGoal.textContent=t.calories;waterGoal.textContent=t.water+" L";prot.textContent=n(s.protein)+"g / "+t.protein+"g";carbs.textContent=n(s.carbs)+"g / "+t.carbs+"g";fat.textContent=n(s.fat)+"g / "+t.fat+"g";fiber.textContent=n(s.fiber)+"g";calBar.style.width=Math.min(100,Math.round((s.calories/t.calories)*100))+"%";todayMeals.innerHTML=d.length?d.map(mealHtml).join(""):"Aucun repas."}
+function mealHtml(m){return `<div class="meal"><div class="row space"><h3>${esc(m.name)}</h3><span class="chip">${esc(m.type)}</span></div><span class="chip">${n(m.calories)} kcal</span><span class="chip">P ${n(m.protein)}g</span><span class="chip">G ${n(m.carbs)}g</span><span class="chip">L ${n(m.fat)}g</span><span class="chip">${n(m.quantity||0)}g</span>${m.advice?`<p class="muted">${esc(m.advice)}</p>`:""}<button class="danger" onclick="delMeal('${m.id}')">Supprimer</button></div>`}
+function delMeal(id){save(STORE.meals,meals().filter(m=>m.id!==id));render();renderHistory()}
+function renderHistory(){let all=meals().slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));historyList.innerHTML=all.length?all.map(mealHtml).join(""):"Aucun historique."}
+
+async function startScanner(){
+  if(!window.Html5Qrcode){alert("La librairie scanner ne s’est pas chargée. Vérifie ta connexion internet.");return}
+  scannerDiv=document.getElementById("scanner");scannerDiv.classList.remove("hidden");
+  if(scannerRunning)return;
+  scanner=new Html5Qrcode("scanner");
+  try{
+    await scanner.start(
+      { facingMode:"environment" },
+      { fps:10, qrbox:{width:260,height:140}, aspectRatio:1.6 },
+      async decodedText => {
+        barcode.value=decodedText;
+        await stopScanner();
+        lookupBarcode();
+      },
+      errorMessage => {}
+    );
+    scannerRunning=true;
+  }catch(e){
+    alert("Impossible d’ouvrir la caméra. Vérifie l’autorisation caméra et que ton site est en HTTPS.");
+  }
+}
+async function stopScanner(){
+  if(scanner && scannerRunning){try{await scanner.stop();await scanner.clear()}catch(e){}}
+  scannerRunning=false;document.getElementById("scanner").classList.add("hidden");
+}
+
+async function lookupBarcode(){
+  let code=barcode.value.trim();if(!code)return alert("Entre ou scanne un code-barres.");
+  try{
+    let res=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,brands,nutriments,quantity`);
+    let data=await res.json();
+    if(data.status!==1||!data.product)return alert("Produit introuvable dans Open Food Facts.");
+    let p=data.product,nut=p.nutriments||{};
+    base100={name:p.product_name||"Produit",calories:nut["energy-kcal_100g"]??0,protein:nut["proteins_100g"]??0,carbs:nut["carbohydrates_100g"]??0,fat:nut["fat_100g"]??0,fiber:nut["fiber_100g"]??0,sugar:nut["sugars_100g"]??0,salt:nut["salt_100g"]??0,advice:"Source Open Food Facts. Ajuste la quantité consommée."};
+    fillResult(base100,100);
+  }catch(e){alert("Erreur Open Food Facts : "+e.message)}
+}
+
+function searchSimpleFood(){
+  let q=simpleSearch.value.trim().toLowerCase();
+  if(!q)return alert("Tape un aliment.");
+  let results=foods.filter(f=>(f.name+" "+f.keys).toLowerCase().includes(q)).slice(0,10);
+  if(!results.length){foodResults.innerHTML="<p class='muted'>Aucun résultat. Essaie un mot plus simple : poulet, riz, pain, saumon...</p>";return}
+  foodResults.innerHTML=results.map((f,i)=>`<button onclick="chooseFood(${foods.indexOf(f)})">${esc(f.name)} <span class="muted">- ${n(f.calories)} kcal / 100g</span></button>`).join("");
+}
+function chooseFood(i){base100={...foods[i],advice:"Base locale enrichie. Valeurs moyennes pour 100g, corrige si besoin."};fillResult(base100,100);foodResults.innerHTML=""}
+function openManual(){base100=null;fillResult({name:"Repas manuel",calories:0,protein:0,carbs:0,fat:0,fiber:0,sugar:0,salt:0,advice:""},100)}
+function fillResult(r,qty){resultCard.classList.remove("hidden");rQty.value=qty;rName.value=r.name;rAdvice.value=r.advice||"";recalcFrom(r,qty)}
+function recalcQty(){if(base100)recalcFrom(base100,+rQty.value||0)}
+function recalcFrom(r,q){let f=(+q||0)/100;rCalories.value=n((+r.calories||0)*f);rProtein.value=one((+r.protein||0)*f);rCarbs.value=one((+r.carbs||0)*f);rFat.value=one((+r.fat||0)*f);rFiber.value=one((+r.fiber||0)*f);rSugar.value=one((+r.sugar||0)*f);rSalt.value=Number((+r.salt||0)*f).toFixed(2)}
+function saveResult(){let m={id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),type:mealType.value,name:rName.value,quantity:+rQty.value,calories:+rCalories.value,protein:+rProtein.value,carbs:+rCarbs.value,fat:+rFat.value,fiber:+rFiber.value,sugar:+rSugar.value,salt:+rSalt.value,advice:rAdvice.value};save(STORE.meals,[...meals(),m]);resultCard.classList.add("hidden");barcode.value="";simpleSearch.value="";render();show("dash")}
+function resetAll(){if(confirm("Tout supprimer ?")){localStorage.clear();location.reload()}}
+fillProfile();render();
+</script>
+</body>
+</html>
