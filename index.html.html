@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mon Coach Calories</title>
+  <meta name="theme-color" content="#111827" />
+  <style>
+    :root{
+      --bg:#0b1020; --card:#141b2f; --card2:#1b2540; --text:#f8fafc; --muted:#aab4c8;
+      --green:#22c55e; --red:#ef4444; --orange:#f59e0b; --blue:#38bdf8; --line:#29324a;
+      --shadow: 0 20px 60px rgba(0,0,0,.35); --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f3b2d 0, var(--bg) 38%, #070a13 100%);
+      color:var(--text); min-height:100vh;
+    }
+    .app{max-width:760px;margin:0 auto;padding:18px 14px 96px}
+    header{display:flex;justify-content:space-between;align-items:center;margin:10px 0 18px}
+    h1{font-size:24px;margin:0;letter-spacing:-.03em}
+    .pill{background:rgba(34,197,94,.14);color:#86efac;border:1px solid rgba(34,197,94,.25);padding:8px 11px;border-radius:999px;font-size:12px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow);border-radius:var(--radius);padding:16px;margin:12px 0;backdrop-filter:blur(12px)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .metric{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:13px}
+    .metric small{display:block;color:var(--muted);font-size:12px}
+    .metric strong{display:block;font-size:24px;margin-top:3px}
+    .row{display:flex;gap:10px;align-items:center}
+    .space{justify-content:space-between}
+    label{display:block;color:var(--muted);font-size:13px;margin:10px 0 6px}
+    input,select,textarea,button{
+      width:100%;border:1px solid rgba(255,255,255,.11);border-radius:16px;padding:13px 14px;
+      background:#0f172a;color:var(--text);font:inherit;outline:none;
+    }
+    textarea{min-height:105px;resize:vertical}
+    button{cursor:pointer;background:linear-gradient(135deg,#22c55e,#16a34a);border:0;font-weight:800;color:#052e16}
+    button.secondary{background:#182238;color:var(--text);border:1px solid rgba(255,255,255,.1)}
+    button.danger{background:#3a1720;color:#fecdd3;border:1px solid rgba(239,68,68,.35)}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(10,15,29,.92);backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.08);display:flex;gap:6px;padding:9px max(9px,env(safe-area-inset-left)) calc(9px + env(safe-area-inset-bottom));z-index:4}
+    .tabs button{background:transparent;color:var(--muted);border:0;border-radius:14px;padding:10px 6px;font-size:12px}
+    .tabs button.active{background:rgba(34,197,94,.14);color:#86efac}
+    .progress{height:12px;background:#0f172a;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.07)}
+    .bar{height:100%;background:linear-gradient(90deg,#22c55e,#84cc16);width:0%}
+    .meal{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:13px;margin:10px 0}
+    .meal h3{margin:0 0 6px;font-size:16px}
+    .muted{color:var(--muted)}
+    .hidden{display:none!important}
+    .warn{background:rgba(245,158,11,.11);border:1px solid rgba(245,158,11,.3);color:#fde68a;border-radius:16px;padding:12px;font-size:13px}
+    .ok{background:rgba(34,197,94,.11);border:1px solid rgba(34,197,94,.25);color:#bbf7d0;border-radius:16px;padding:12px;font-size:13px}
+    .tiny{font-size:12px;color:var(--muted)}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+    .chip{width:auto;padding:8px 10px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid rgba(255,255,255,.08);font-size:12px}
+    img.preview{width:100%;max-height:260px;object-fit:cover;border-radius:18px;margin-top:10px;border:1px solid rgba(255,255,255,.09)}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Mon Coach Calories</h1>
+        <div class="tiny">Suivi simple, efficace, mobile-first</div>
+      </div>
+      <div class="pill">MVP perso</div>
+    </header>
+
+    <section id="view-dashboard">
+      <div class="card">
+        <div class="row space">
+          <div>
+            <div class="muted">Aujourd’hui</div>
+            <h2 style="margin:2px 0 0">Tableau de bord</h2>
+          </div>
+          <button class="secondary" style="width:auto" onclick="showView('add')">+ Repas</button>
+        </div>
+        <div class="grid" style="margin-top:12px">
+          <div class="metric"><small>Calories consommées</small><strong id="calIn">0</strong></div>
+          <div class="metric"><small>Calories restantes</small><strong id="calLeft">0</strong></div>
+          <div class="metric"><small>Objectif kcal</small><strong id="calGoal">0</strong></div>
+          <div class="metric"><small>Eau conseillée</small><strong id="waterGoal">0 L</strong></div>
+        </div>
+        <label>Progression calories</label>
+        <div class="progress"><div class="bar" id="calBar"></div></div>
+      </div>
+
+      <div class="card">
+        <h2>Macros</h2>
+        <div class="grid">
+          <div class="metric"><small>Protéines</small><strong id="prot">0g</strong><span class="tiny" id="protGoal"></span></div>
+          <div class="metric"><small>Glucides</small><strong id="carbs">0g</strong><span class="tiny" id="carbsGoal"></span></div>
+          <div class="metric"><small>Lipides</small><strong id="fat">0g</strong><span class="tiny" id="fatGoal"></span></div>
+          <div class="metric"><small>Fibres</small><strong id="fiber">0g</strong><span class="tiny">objectif 25-35g</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Repas du jour</h2>
+        <div id="todayMeals" class="muted">Aucun repas enregistré.</div>
+      </div>
+    </section>
+
+    <section id="view-add" class="hidden">
+      <div class="card">
+        <h2>Ajouter un repas</h2>
+        <label>Type de repas</label>
+        <select id="mealType">
+          <option>Petit-déjeuner</option><option>Déjeuner</option><option>Dîner</option><option>Collation</option>
+        </select>
+
+        <label>Décrire le repas</label>
+        <textarea id="mealText" placeholder="Ex : 2 œufs, 100g de riz, 1 steak haché, salade..."></textarea>
+
+        <label>Ou prendre/importer une photo</label>
+        <input id="mealPhoto" type="file" accept="image/*" capture="environment" />
+        <img id="preview" class="preview hidden" />
+
+        <div class="warn" style="margin-top:12px">
+          Les valeurs sont des estimations. Corrige si besoin avant d’enregistrer.
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button onclick="analyzeMeal()" id="analyzeBtn">Analyser avec IA</button>
+          <button class="secondary" onclick="openManual()">Manuel</button>
+        </div>
+      </div>
+
+      <div id="resultCard" class="card hidden">
+        <h2>Résultat estimé</h2>
+        <label>Nom</label><input id="rName">
+        <div class="grid">
+          <div><label>Calories</label><input id="rCalories" type="number"></div>
+          <div><label>Protéines g</label><input id="rProtein" type="number"></div>
+          <div><label>Glucides g</label><input id="rCarbs" type="number"></div>
+          <div><label>Lipides g</label><input id="rFat" type="number"></div>
+          <div><label>Fibres g</label><input id="rFiber" type="number"></div>
+          <div><label>Sucre g</label><input id="rSugar" type="number"></div>
+          <div><label>Sel g</label><input id="rSalt" type="number" step="0.1"></div>
+          <div><label>Confiance %</label><input id="rConfidence" type="number"></div>
+        </div>
+        <label>Aliments détectés</label><textarea id="rItems"></textarea>
+        <label>Conseil</label><textarea id="rAdvice"></textarea>
+        <button style="margin-top:12px" onclick="saveResult()">Enregistrer le repas</button>
+      </div>
+    </section>
+
+    <section id="view-history" class="hidden">
+      <div class="card">
+        <h2>Historique</h2>
+        <div id="historyList"></div>
+      </div>
+    </section>
+
+    <section id="view-profile" class="hidden">
+      <div class="card">
+        <h2>Profil & objectif</h2>
+        <div class="grid">
+          <div><label>Sexe</label><select id="sex"><option value="male">Homme</option><option value="female">Femme</option></select></div>
+          <div><label>Âge</label><input id="age" type="number" value="30"></div>
+          <div><label>Taille cm</label><input id="height" type="number" value="175"></div>
+          <div><label>Poids kg</label><input id="weight" type="number" value="75"></div>
+          <div><label>Activité</label><select id="activity">
+            <option value="1.2">Sédentaire</option><option value="1.375">Léger</option>
+            <option value="1.55">Modéré</option><option value="1.725">Actif</option><option value="1.9">Très actif</option>
+          </select></div>
+          <div><label>Objectif</label><select id="goal">
+            <option value="lose">Perdre du poids</option><option value="maintain">Maintenir</option><option value="gain">Prendre du muscle</option>
+          </select></div>
+        </div>
+        <button style="margin-top:14px" onclick="saveProfile()">Sauvegarder profil</button>
+      </div>
+
+      <div class="card">
+        <h2>Réglages IA</h2>
+        <div class="warn">
+          Ne mets jamais ta clé dans une app publique. Pour usage perso local, ça dépanne, mais le mieux est un serveur Next.js/Vercel.
+        </div>
+        <label>Clé API OpenAI</label>
+        <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off">
+        <label>Modèle</label>
+        <input id="model" value="gpt-4.1-mini">
+        <button style="margin-top:12px" onclick="saveSettings()">Sauvegarder réglages</button>
+        <button class="danger" style="margin-top:10px" onclick="resetAll()">Réinitialiser toutes les données</button>
+      </div>
+    </section>
+  </div>
+
+  <nav class="tabs">
+    <button id="tab-dashboard" class="active" onclick="showView('dashboard')">Accueil</button>
+    <button id="tab-add" onclick="showView('add')">Ajouter</button>
+    <button id="tab-history" onclick="showView('history')">Historique</button>
+    <button id="tab-profile" onclick="showView('profile')">Profil</button>
+  </nav>
+
+<script>
+const STORE = {
+  profile: "coach_profile_v1",
+  meals: "coach_meals_v1",
+  settings: "coach_settings_v1"
+};
+
+let currentResult = null;
+let photoDataUrl = null;
+
+function todayKey(date = new Date()){
+  return date.toISOString().slice(0,10);
+}
+function euros(n){ return Math.round(Number(n || 0)); }
+function load(key, fallback){ try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
+function save(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+
+function defaultProfile(){
+  return {sex:"male", age:30, height:175, weight:75, activity:1.55, goal:"lose"};
+}
+function getProfile(){ return load(STORE.profile, defaultProfile()); }
+function getMeals(){ return load(STORE.meals, []); }
+function getSettings(){ return load(STORE.settings, {apiKey:"", model:"gpt-4.1-mini"}); }
+
+function calcTargets(p){
+  const weight = Number(p.weight), height = Number(p.height), age = Number(p.age), activity = Number(p.activity);
+  let bmr = p.sex === "male" ? 10*weight + 6.25*height - 5*age + 5 : 10*weight + 6.25*height - 5*age - 161;
+  let maintenance = bmr * activity;
+  let calories = maintenance;
+  if(p.goal === "lose") calories -= 400;
+  if(p.goal === "gain") calories += 250;
+  calories = Math.max(1200, Math.round(calories));
+
+  const proteinPerKg = p.goal === "gain" ? 2.2 : p.goal === "lose" ? 2.0 : 1.6;
+  const protein = Math.round(weight * proteinPerKg);
+  const fat = Math.round(weight * 0.9);
+  const used = protein*4 + fat*9;
+  const carbs = Math.max(0, Math.round((calories - used) / 4));
+  const water = (weight * 0.035).toFixed(1);
+  return {bmr:Math.round(bmr), maintenance:Math.round(maintenance), calories, protein, fat, carbs, fiberMin:25, fiberMax:35, water};
+}
+
+function showView(name){
+  ["dashboard","add","history","profile"].forEach(v=>{
+    document.getElementById("view-"+v).classList.toggle("hidden", v!==name);
+    document.getElementById("tab-"+v).classList.toggle("active", v===name);
+  });
+  if(name === "history") renderHistory();
+  if(name === "profile") fillProfile();
+  renderDashboard();
+}
+
+function fillProfile(){
+  const p = getProfile(), s = getSettings();
+  sex.value=p.sex; age.value=p.age; height.value=p.height; weight.value=p.weight; activity.value=p.activity; goal.value=p.goal;
+  apiKey.value=s.apiKey || ""; model.value=s.model || "gpt-4.1-mini";
+}
+
+function saveProfile(){
+  const p = {sex:sex.value, age:+age.value, height:+height.value, weight:+weight.value, activity:+activity.value, goal:goal.value};
+  save(STORE.profile, p); renderDashboard(); alert("Profil sauvegardé ✅");
+}
+function saveSettings(){
+  save(STORE.settings, {apiKey:apiKey.value.trim(), model:model.value.trim() || "gpt-4.1-mini"});
+  alert("Réglages sauvegardés ✅");
+}
+function resetAll(){
+  if(confirm("Tout supprimer ? Profil, repas et réglages seront effacés.")){
+    localStorage.removeItem(STORE.profile); localStorage.removeItem(STORE.meals); localStorage.removeItem(STORE.settings);
+    location.reload();
+  }
+}
+
+function sums(meals){
+  return meals.reduce((a,m)=>{
+    a.calories += +m.calories||0; a.protein += +m.protein||0; a.carbs += +m.carbs||0; a.fat += +m.fat||0; a.fiber += +m.fiber||0;
+    return a;
+  }, {calories:0, protein:0, carbs:0, fat:0, fiber:0});
+}
+
+function renderDashboard(){
+  const profile = getProfile(), targets = calcTargets(profile);
+  const meals = getMeals().filter(m=>m.date === todayKey());
+  const s = sums(meals);
+  calIn.textContent = euros(s.calories);
+  calLeft.textContent = euros(targets.calories - s.calories);
+  calGoal.textContent = targets.calories;
+  waterGoal.textContent = targets.water + " L";
+  prot.textContent = euros(s.protein)+"g"; protGoal.textContent = "objectif "+targets.protein+"g";
+  carbs.textContent = euros(s.carbs)+"g"; carbsGoal.textContent = "objectif "+targets.carbs+"g";
+  fat.textContent = euros(s.fat)+"g"; fatGoal.textContent = "objectif "+targets.fat+"g";
+  fiber.textContent = euros(s.fiber)+"g";
+  calBar.style.width = Math.min(100, Math.round((s.calories / targets.calories)*100)) + "%";
+
+  todayMeals.innerHTML = meals.length ? meals.map(mealHtml).join("") : "Aucun repas enregistré.";
+}
+
+function mealHtml(m){
+  return `<div class="meal">
+    <div class="row space"><h3>${escapeHtml(m.name)}</h3><span class="chip">${escapeHtml(m.type)}</span></div>
+    <div class="tiny">${new Date(m.createdAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div>
+    <div class="chips">
+      <span class="chip">${euros(m.calories)} kcal</span><span class="chip">P ${euros(m.protein)}g</span>
+      <span class="chip">G ${euros(m.carbs)}g</span><span class="chip">L ${euros(m.fat)}g</span>
+    </div>
+    ${m.advice ? `<p class="muted">${escapeHtml(m.advice)}</p>` : ""}
+    <button class="danger" style="margin-top:10px" onclick="deleteMeal('${m.id}')">Supprimer</button>
+  </div>`;
+}
+
+function deleteMeal(id){
+  save(STORE.meals, getMeals().filter(m=>m.id!==id));
+  renderDashboard(); renderHistory();
+}
+
+function renderHistory(){
+  const meals = getMeals().slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  if(!meals.length){ historyList.innerHTML = "<p class='muted'>Aucun historique.</p>"; return; }
+  const byDay = {};
+  meals.forEach(m => (byDay[m.date] ||= []).push(m));
+  historyList.innerHTML = Object.entries(byDay).map(([day, items])=>{
+    const s = sums(items);
+    return `<div class="meal"><h3>${day}</h3><div class="tiny">${euros(s.calories)} kcal | P ${euros(s.protein)}g | G ${euros(s.carbs)}g | L ${euros(s.fat)}g</div>${items.map(mealHtml).join("")}</div>`;
+  }).join("");
+}
+
+mealPhoto.addEventListener("change", async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  photoDataUrl = await fileToDataUrl(file);
+  preview.src = photoDataUrl; preview.classList.remove("hidden");
+});
+
+function fileToDataUrl(file){
+  return new Promise((resolve,reject)=>{ const r = new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(file); });
+}
+function openManual(){
+  currentResult = {name:"Repas manuel", items:[], calories:0, protein:0, carbs:0, fat:0, fiber:0, sugar:0, salt:0, confidence:100, advice:""};
+  fillResult(currentResult); resultCard.classList.remove("hidden");
+}
+
+async function analyzeMeal(){
+  const settings = getSettings();
+  if(!settings.apiKey){ alert("Ajoute ta clé API dans Profil > Réglages IA."); showView("profile"); return; }
+  const text = mealText.value.trim();
+  if(!text && !photoDataUrl){ alert("Écris un repas ou ajoute une photo."); return; }
+
+  analyzeBtn.disabled = true; analyzeBtn.textContent = "Analyse en cours...";
+  try{
+    const content = [
+      {type:"input_text", text:`Analyse ce repas en français. Description utilisateur: ${text || "Aucune description"}. Retourne uniquement un JSON valide avec: name, items tableau de {food, quantity}, calories, protein, carbs, fat, fiber, sugar, salt, confidence, advice. Les nombres doivent être en grammes sauf calories.`}
+    ];
+    if(photoDataUrl) content.push({type:"input_image", image_url: photoDataUrl});
+
+    const body = {
+      model: settings.model || "gpt-4.1-mini",
+      input: [{role:"user", content}],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "meal_nutrition",
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              name:{type:"string"},
+              items:{type:"array", items:{type:"object", additionalProperties:false, properties:{food:{type:"string"}, quantity:{type:"string"}}, required:["food","quantity"]}},
+              calories:{type:"number"}, protein:{type:"number"}, carbs:{type:"number"}, fat:{type:"number"}, fiber:{type:"number"},
+              sugar:{type:"number"}, salt:{type:"number"}, confidence:{type:"number"}, advice:{type:"string"}
+            },
+            required:["name","items","calories","protein","carbs","fat","fiber","sugar","salt","confidence","advice"]
+          },
+          strict: true
+        }
+      }
+    };
+
+    const res = await fetch("https://api.openai.com/v1/responses", {
+      method:"POST",
+      headers: {"Content-Type":"application/json", "Authorization":"Bearer " + settings.apiKey},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error?.message || "Erreur OpenAI");
+
+    const txt = data.output_text || data.output?.flatMap(o=>o.content||[]).find(c=>c.text)?.text || "";
+    currentResult = JSON.parse(txt);
+    fillResult(currentResult);
+    resultCard.classList.remove("hidden");
+  }catch(err){
+    alert("Erreur analyse : " + err.message);
+    console.error(err);
+  }finally{
+    analyzeBtn.disabled = false; analyzeBtn.textContent = "Analyser avec IA";
+  }
+}
+
+function fillResult(r){
+  rName.value = r.name || "Repas";
+  rCalories.value = Math.round(r.calories || 0);
+  rProtein.value = Math.round(r.protein || 0);
+  rCarbs.value = Math.round(r.carbs || 0);
+  rFat.value = Math.round(r.fat || 0);
+  rFiber.value = Math.round(r.fiber || 0);
+  rSugar.value = Math.round(r.sugar || 0);
+  rSalt.value = Number(r.salt || 0).toFixed(1);
+  rConfidence.value = Math.round(r.confidence || 0);
+  rItems.value = Array.isArray(r.items) ? r.items.map(i=>`${i.food} - ${i.quantity}`).join("\n") : "";
+  rAdvice.value = r.advice || "";
+}
+
+function saveResult(){
+  const meal = {
+    id: crypto.randomUUID(), date: todayKey(), createdAt: new Date().toISOString(), type: mealType.value,
+    name: rName.value, calories:+rCalories.value, protein:+rProtein.value, carbs:+rCarbs.value, fat:+rFat.value,
+    fiber:+rFiber.value, sugar:+rSugar.value, salt:+rSalt.value, confidence:+rConfidence.value,
+    items: rItems.value, advice: rAdvice.value
+  };
+  save(STORE.meals, [...getMeals(), meal]);
+  mealText.value = ""; mealPhoto.value = ""; photoDataUrl = null; preview.classList.add("hidden"); resultCard.classList.add("hidden");
+  renderDashboard(); showView("dashboard");
+}
+
+function escapeHtml(str){
+  return String(str || "").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+fillProfile();
+renderDashboard();
+</script>
+</body>
+</html>
